@@ -1,0 +1,597 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Tic-Tac-Toe | Cyberpunk Edition</title>
+  <style>
+    :root {
+      --bg-1: #07070f;
+      --bg-2: #101225;
+      --cyan: #26f0ff;
+      --pink: #ff2bd6;
+      --purple: #8a2bff;
+      --text: #eef4ff;
+      --muted: #9aa3c9;
+      --win: #3fff9e;
+      --danger: #ff4d7a;
+      --shadow-cyan: 0 0 20px rgba(38, 240, 255, 0.45);
+      --shadow-pink: 0 0 20px rgba(255, 43, 214, 0.45);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Segoe UI", Roboto, system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 10%, rgba(138, 43, 255, 0.20), transparent 40%),
+        radial-gradient(circle at 80% 0%, rgba(38, 240, 255, 0.18), transparent 35%),
+        radial-gradient(circle at 50% 100%, rgba(255, 43, 214, 0.14), transparent 40%),
+        linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.03) 0px,
+        rgba(255, 255, 255, 0.03) 1px,
+        transparent 2px,
+        transparent 4px
+      );
+      mix-blend-mode: soft-light;
+      opacity: 0.3;
+    }
+
+    .container {
+      width: min(100%, 980px);
+      margin: 0 auto;
+      padding: 2rem 1rem 1.5rem;
+    }
+
+    .glass {
+      background: linear-gradient(145deg, rgba(18, 23, 46, 0.74), rgba(10, 14, 32, 0.84));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+        0 15px 45px rgba(0, 0, 0, 0.45);
+    }
+
+    .hero {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.2rem 1.4rem;
+      margin-bottom: 1rem;
+    }
+
+    .title {
+      margin: 0;
+      font-size: clamp(1.2rem, 2.8vw, 2rem);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-shadow: var(--shadow-cyan), var(--shadow-pink);
+    }
+
+    .sub {
+      margin: 0.35rem 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.45rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(38, 240, 255, 0.4);
+      color: var(--cyan);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      box-shadow: var(--shadow-cyan);
+      white-space: nowrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .panel {
+      padding: 1rem;
+    }
+
+    .status {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .pill {
+      flex: 1 1 130px;
+      border-radius: 14px;
+      padding: 0.7rem 0.8rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .pill strong {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.2rem;
+    }
+
+    .pill span {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .turn-x { color: var(--cyan); text-shadow: var(--shadow-cyan); }
+    .turn-o { color: var(--pink); text-shadow: var(--shadow-pink); }
+
+    .board-wrap {
+      position: relative;
+      width: min(92vw, 430px);
+      aspect-ratio: 1;
+      margin: 0 auto;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.7rem;
+      width: 100%;
+      height: 100%;
+    }
+
+    .cell {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+      display: grid;
+      place-items: center;
+      font-size: clamp(2rem, 8vw, 3.2rem);
+      font-weight: 800;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .cell:hover:not(.disabled) {
+      transform: translateY(-2px);
+      border-color: rgba(38, 240, 255, 0.6);
+      box-shadow: var(--shadow-cyan);
+    }
+
+    .cell.x {
+      color: var(--cyan);
+      text-shadow: var(--shadow-cyan);
+    }
+
+    .cell.o {
+      color: var(--pink);
+      text-shadow: var(--shadow-pink);
+    }
+
+    .cell.win {
+      border-color: rgba(63, 255, 158, 0.8);
+      box-shadow: 0 0 22px rgba(63, 255, 158, 0.5);
+      animation: pulseWin 0.9s infinite alternate;
+    }
+
+    .cell.disabled {
+      cursor: not-allowed;
+      opacity: 0.95;
+    }
+
+    @keyframes pulseWin {
+      from { transform: scale(1); }
+      to { transform: scale(1.04); }
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.55rem;
+      margin-top: 1rem;
+    }
+
+    button, select {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      padding: 0.72rem 0.85rem;
+      font: inherit;
+      color: var(--text);
+    }
+
+    select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      outline: none;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, rgba(38, 240, 255, 0.2), rgba(138, 43, 255, 0.2));
+      border: 1px solid rgba(38, 240, 255, 0.45);
+      cursor: pointer;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-cyan);
+    }
+
+    .btn.secondary {
+      background: linear-gradient(135deg, rgba(255, 43, 214, 0.16), rgba(255, 77, 122, 0.16));
+      border-color: rgba(255, 43, 214, 0.45);
+    }
+
+    .btn.secondary:hover {
+      box-shadow: var(--shadow-pink);
+    }
+
+    .msg {
+      margin-top: 0.85rem;
+      min-height: 1.4rem;
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.95rem;
+    }
+
+    .msg.win { color: var(--win); text-shadow: 0 0 14px rgba(63, 255, 158, 0.45); }
+    .msg.draw { color: #ffd36a; }
+    .msg.lose { color: var(--danger); }
+
+    @media (min-width: 860px) {
+      .layout {
+        grid-template-columns: 1.2fr 0.8fr;
+        align-items: start;
+      }
+
+      .controls {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .controls .full {
+        grid-column: 1 / -1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="hero glass">
+      <div>
+        <h1 class="title">Neon 3 en Raya</h1>
+        <p class="sub">Modo jugador vs IA con dificultad escalable y marcador en tiempo real.</p>
+      </div>
+      <div class="badge">⚡ Cyberpunk Mode</div>
+    </section>
+
+    <section class="layout">
+      <article class="panel glass">
+        <div class="status">
+          <div class="pill">
+            <strong>Turno</strong>
+            <span id="turnDisplay" class="turn-x">Jugador (X)</span>
+          </div>
+          <div class="pill">
+            <strong>Dificultad</strong>
+            <span id="difficultyDisplay">Normal</span>
+          </div>
+          <div class="pill">
+            <strong>Ronda</strong>
+            <span id="roundDisplay">1</span>
+          </div>
+        </div>
+
+        <div class="board-wrap">
+          <div id="board" class="board" aria-label="Tablero 3 en raya"></div>
+        </div>
+
+        <p id="message" class="msg">Tu misión: gana antes que la IA.</p>
+      </article>
+
+      <aside class="panel glass">
+        <div class="status">
+          <div class="pill">
+            <strong>Jugador</strong>
+            <span id="scorePlayer" class="turn-x">0</span>
+          </div>
+          <div class="pill">
+            <strong>IA</strong>
+            <span id="scoreAi" class="turn-o">0</span>
+          </div>
+          <div class="pill">
+            <strong>Empates</strong>
+            <span id="scoreDraw">0</span>
+          </div>
+        </div>
+
+        <div class="controls">
+          <select id="difficultySelect" class="full" aria-label="Seleccionar dificultad">
+            <option value="easy">Fácil</option>
+            <option value="normal" selected>Normal</option>
+            <option value="hard">Difícil</option>
+          </select>
+
+          <button id="nextRoundBtn" class="btn">Siguiente ronda</button>
+          <button id="resetBoardBtn" class="btn secondary">Reiniciar tablero</button>
+          <button id="resetAllBtn" class="btn full">Reiniciar marcador</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const boardEl = document.getElementById("board");
+    const turnDisplay = document.getElementById("turnDisplay");
+    const difficultyDisplay = document.getElementById("difficultyDisplay");
+    const roundDisplay = document.getElementById("roundDisplay");
+    const msgEl = document.getElementById("message");
+
+    const scorePlayerEl = document.getElementById("scorePlayer");
+    const scoreAiEl = document.getElementById("scoreAi");
+    const scoreDrawEl = document.getElementById("scoreDraw");
+
+    const difficultySelect = document.getElementById("difficultySelect");
+    const nextRoundBtn = document.getElementById("nextRoundBtn");
+    const resetBoardBtn = document.getElementById("resetBoardBtn");
+    const resetAllBtn = document.getElementById("resetAllBtn");
+
+    const PLAYER = "X";
+    const AI = "O";
+    const winningCombos = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6]
+    ];
+
+    let board = Array(9).fill("");
+    let round = 1;
+    let gameOver = false;
+    let scores = { player: 0, ai: 0, draw: 0 };
+
+    function createBoard() {
+      boardEl.innerHTML = "";
+      board.forEach((_, index) => {
+        const cell = document.createElement("button");
+        cell.className = "cell";
+        cell.setAttribute("aria-label", `Casilla ${index + 1}`);
+        cell.addEventListener("click", () => handlePlayerMove(index));
+        boardEl.appendChild(cell);
+      });
+      renderBoard();
+    }
+
+    function renderBoard(highlight = []) {
+      [...boardEl.children].forEach((cell, i) => {
+        const value = board[i];
+        cell.textContent = value;
+        cell.classList.remove("x", "o", "win", "disabled");
+
+        if (value === PLAYER) cell.classList.add("x");
+        if (value === AI) cell.classList.add("o");
+        if (highlight.includes(i)) cell.classList.add("win");
+
+        if (gameOver || value) {
+          cell.classList.add("disabled");
+          cell.disabled = true;
+        } else {
+          cell.disabled = false;
+        }
+      });
+    }
+
+    function setMessage(text, type = "") {
+      msgEl.textContent = text;
+      msgEl.className = `msg ${type}`.trim();
+    }
+
+    function updateStatus() {
+      difficultyDisplay.textContent = difficultySelect.options[difficultySelect.selectedIndex].text;
+      roundDisplay.textContent = String(round);
+      scorePlayerEl.textContent = String(scores.player);
+      scoreAiEl.textContent = String(scores.ai);
+      scoreDrawEl.textContent = String(scores.draw);
+    }
+
+    function setTurn(player) {
+      if (player === PLAYER) {
+        turnDisplay.textContent = "Jugador (X)";
+        turnDisplay.className = "turn-x";
+      } else {
+        turnDisplay.textContent = "IA (O)";
+        turnDisplay.className = "turn-o";
+      }
+    }
+
+    function getWinner(currentBoard) {
+      for (const combo of winningCombos) {
+        const [a, b, c] = combo;
+        if (currentBoard[a] && currentBoard[a] === currentBoard[b] && currentBoard[a] === currentBoard[c]) {
+          return { player: currentBoard[a], combo };
+        }
+      }
+      return null;
+    }
+
+    function getEmptyIndexes(currentBoard) {
+      return currentBoard
+        .map((value, index) => (value ? null : index))
+        .filter((index) => index !== null);
+    }
+
+    function endRound(result, combo = []) {
+      gameOver = true;
+      renderBoard(combo);
+
+      if (result === PLAYER) {
+        scores.player += 1;
+        setMessage("¡Victoria épica! Le ganaste a la IA.", "win");
+      } else if (result === AI) {
+        scores.ai += 1;
+        setMessage("La IA tomó el control esta ronda.", "lose");
+      } else {
+        scores.draw += 1;
+        setMessage("Empate táctico. Nadie domina la red.", "draw");
+      }
+
+      updateStatus();
+      setTurn("-");
+    }
+
+    function checkStateAndContinue() {
+      const winner = getWinner(board);
+      if (winner) {
+        endRound(winner.player, winner.combo);
+        return true;
+      }
+
+      if (!board.includes("")) {
+        endRound("draw");
+        return true;
+      }
+
+      return false;
+    }
+
+    function handlePlayerMove(index) {
+      if (gameOver || board[index]) return;
+
+      board[index] = PLAYER;
+      renderBoard();
+
+      if (checkStateAndContinue()) return;
+
+      setTurn(AI);
+      setMessage("La IA está calculando su jugada...");
+      setTimeout(aiMove, 360);
+    }
+
+    function aiMove() {
+      if (gameOver) return;
+
+      const difficulty = difficultySelect.value;
+      let index;
+
+      if (difficulty === "easy") {
+        index = randomMove(board);
+      } else if (difficulty === "normal") {
+        index = Math.random() < 0.55 ? bestMove(board) : randomMove(board);
+      } else {
+        index = bestMove(board);
+      }
+
+      board[index] = AI;
+      renderBoard();
+
+      if (checkStateAndContinue()) return;
+
+      setTurn(PLAYER);
+      setMessage("Tu turno. Piensa como un hacker táctico.");
+    }
+
+    function randomMove(currentBoard) {
+      const empty = getEmptyIndexes(currentBoard);
+      return empty[Math.floor(Math.random() * empty.length)];
+    }
+
+    function bestMove(currentBoard) {
+      let bestScore = -Infinity;
+      let move = null;
+      const empty = getEmptyIndexes(currentBoard);
+
+      for (const index of empty) {
+        currentBoard[index] = AI;
+        const score = minimax(currentBoard, 0, false);
+        currentBoard[index] = "";
+
+        if (score > bestScore) {
+          bestScore = score;
+          move = index;
+        }
+      }
+
+      return move ?? randomMove(currentBoard);
+    }
+
+    function minimax(currentBoard, depth, isMaximizing) {
+      const winner = getWinner(currentBoard);
+      if (winner?.player === AI) return 10 - depth;
+      if (winner?.player === PLAYER) return depth - 10;
+      if (!currentBoard.includes("")) return 0;
+
+      const empty = getEmptyIndexes(currentBoard);
+
+      if (isMaximizing) {
+        let best = -Infinity;
+        for (const index of empty) {
+          currentBoard[index] = AI;
+          best = Math.max(best, minimax(currentBoard, depth + 1, false));
+          currentBoard[index] = "";
+        }
+        return best;
+      }
+
+      let best = Infinity;
+      for (const index of empty) {
+        currentBoard[index] = PLAYER;
+        best = Math.min(best, minimax(currentBoard, depth + 1, true));
+        currentBoard[index] = "";
+      }
+      return best;
+    }
+
+    function resetBoard(advanceRound = false) {
+      board = Array(9).fill("");
+      gameOver = false;
+      if (advanceRound) round += 1;
+      renderBoard();
+      setTurn(PLAYER);
+      setMessage("Nueva ronda iniciada. ¡Haz tu mejor jugada!");
+      updateStatus();
+    }
+
+    function resetAll() {
+      scores = { player: 0, ai: 0, draw: 0 };
+      round = 1;
+      resetBoard(false);
+      setMessage("Marcador reiniciado. Que empiece la batalla neón.");
+    }
+
+    difficultySelect.addEventListener("change", () => {
+      updateStatus();
+      setMessage(`Dificultad cambiada a ${difficultySelect.options[difficultySelect.selectedIndex].text}.`);
+    });
+
+    nextRoundBtn.addEventListener("click", () => resetBoard(true));
+    resetBoardBtn.addEventListener("click", () => resetBoard(false));
+    resetAllBtn.addEventListener("click", resetAll);
+
+    createBoard();
+    updateStatus();
+  </script>
+</body>
+</html>
